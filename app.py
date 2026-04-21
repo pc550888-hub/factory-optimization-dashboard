@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 
@@ -21,9 +20,20 @@ sim_df, rec_df = load_data()
 # ---------------- SIDEBAR ----------------
 st.sidebar.header("⚙️ Controls")
 
-region = st.sidebar.selectbox("Region", sim_df["Region"].dropna().unique())
-ship_mode = st.sidebar.selectbox("Ship Mode", sim_df["Ship Mode"].dropna().unique())
-priority = st.sidebar.slider("Speed vs Profit Priority (%)", 0, 100, 50)
+region = st.sidebar.selectbox(
+    "Region", 
+    sorted(sim_df["Region"].dropna().unique())
+)
+
+ship_mode = st.sidebar.selectbox(
+    "Ship Mode", 
+    sorted(sim_df["Ship Mode"].dropna().unique())
+)
+
+priority = st.sidebar.slider(
+    "Speed vs Profit Priority (%)", 
+    0, 100, 50
+)
 
 # ---------------- FILTER SIM DATA ----------------
 filtered_sim = sim_df[
@@ -32,17 +42,23 @@ filtered_sim = sim_df[
 ]
 
 # ---------------- GET PRODUCTS ----------------
-products = filtered_sim["Product Name"].dropna().unique()
+products = sorted(filtered_sim["Product Name"].dropna().unique())
 
 st.title("🏭 Factory Optimization Dashboard")
 
 # ---------------- METRICS ----------------
 col1, col2, col3, col4 = st.columns(4)
 
-col1.metric("Avg Improvement", round(filtered_sim["Improvement"].mean(), 2))
-col2.metric("Avg Profit Impact", round(filtered_sim["Profit_Impact"].mean(), 2))
-col3.metric("Top Factory", filtered_sim["Factory"].mode()[0] if len(filtered_sim) else "N/A")
-col4.metric("Products", len(products))
+if len(filtered_sim) > 0:
+    col1.metric("Avg Improvement", round(filtered_sim["Improvement"].mean(), 2))
+    col2.metric("Avg Profit Impact", round(filtered_sim["Profit_Impact"].mean(), 2))
+    col3.metric("Top Factory", filtered_sim["Factory"].mode()[0])
+    col4.metric("Products", len(products))
+else:
+    col1.metric("Avg Improvement", 0)
+    col2.metric("Avg Profit Impact", 0)
+    col3.metric("Top Factory", "N/A")
+    col4.metric("Products", 0)
 
 # ---------------- OPTIMIZER ----------------
 st.subheader("🎯 Optimization Simulator")
@@ -57,7 +73,7 @@ product = st.selectbox("Select Product", products)
 rec_filtered = rec_df[rec_df["Product Name"] == product].copy()
 
 if len(rec_filtered) == 0:
-    st.warning("No recommendation data available")
+    st.warning("No recommendation data available for this product")
     st.stop()
 
 # ---------------- SCORE CALCULATION ----------------
@@ -70,12 +86,15 @@ rec_filtered["Final_Score"] = (
 best = rec_filtered.sort_values("Final_Score", ascending=False).iloc[0]
 
 # ---------------- OUTPUT ----------------
-st.markdown(f"""
-<div style="background:#f1f5f9;padding:15px;border-radius:10px;color:black">
-🏆 <b>Recommended Factory:</b> {best['Factory']}<br>
-Score: {round(best['Final_Score'],3)}
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    f"""
+    <div style="background:#f1f5f9;padding:15px;border-radius:10px">
+    🏆 <b>Recommended Factory:</b> {best['Factory']}<br>
+    Score: {round(best['Final_Score'], 3)}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ---------------- RISK ----------------
 if best["Risk"] > 1:
@@ -88,8 +107,7 @@ else:
 # ---------------- EXPLANATION ----------------
 st.subheader("💡 Decision Explanation")
 
-st.write(f"Improvement: {round(best['Improvement'],2)}")
-st.write(f"Profit Impact: {round(best['Profit_Impact'],2)}")
-st.write(f"Risk: {round(best['Risk'],2)}")
+st.write(f"Improvement: {round(best['Improvement'], 2)}")
+st.write(f"Profit Impact: {round(best['Profit_Impact'], 2)}")
+st.write(f"Risk: {round(best['Risk'], 2)}")
 st.write(f"Priority Weight: {priority}%")
-```
