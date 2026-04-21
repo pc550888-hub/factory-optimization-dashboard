@@ -51,11 +51,25 @@ st.markdown("---")
 # ---------------- OPTIMIZATION ----------------
 st.subheader("🎯 Optimization Simulator")
 
-product = st.selectbox("Select Product", rec["Product Name"].unique())
+# ✅ FILTER recommendations also using sidebar filters
+filtered_rec = rec[
+    (rec["Region"] == region) &
+    (rec["Ship Mode"] == ship_mode)
+]
 
-df = rec[rec["Product Name"] == product].copy()
+# ✅ Product dropdown depends on filtered data
+products = filtered_rec["Product Name"].unique()
 
-# 🧠 SAFE NORMALIZATION (dynamic)
+if len(products) == 0:
+    st.warning("No data available for selected filters")
+    st.stop()
+
+product = st.selectbox("Select Product", products)
+
+# ✅ Now filter based on selected product
+df = filtered_rec[filtered_rec["Product Name"] == product].copy()
+
+# 🧠 SAFE NORMALIZATION
 def safe_norm(col):
     if col.max() == 0:
         return col
@@ -65,17 +79,17 @@ df["Improvement_norm"] = safe_norm(df["Improvement"])
 df["Profit_Impact_norm"] = safe_norm(df["Profit_Impact"])
 df["Risk_norm"] = safe_norm(df["Risk"])
 
-# 🧠 DYNAMIC SCORE
+# 🧠 DYNAMIC SCORE (balanced properly)
 df["Dynamic_Score"] = (
     (priority / 100) * df["Improvement_norm"] +
     ((100 - priority) / 100) * df["Profit_Impact_norm"] -
-    (0.5 * df["Risk_norm"])
+    (0.3 * df["Risk_norm"])   # reduced risk penalty so variation appears
 )
 
-# 🎯 Pick best factory dynamically
+# 🎯 Best factory per product + filters
 best = df.sort_values("Dynamic_Score", ascending=False).iloc[0]
 
-# ---------------- RESULT BOX ----------------
+# ---------------- RESULT ----------------
 st.markdown(f"""
 <div style="background:#f1f5f9;padding:15px;border-radius:10px;color:black">
 🏆 <b>Recommended Factory:</b> {best['Factory']}<br>
@@ -83,7 +97,7 @@ Score: {round(best['Dynamic_Score'],2)}
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- DECISION LOGIC ----------------
+# ---------------- INSIGHT ----------------
 if best["Improvement"] < 0.05:
     insight = "⚠️ No strong improvement opportunity"
 elif best["Risk"] > 0.7:
@@ -101,7 +115,6 @@ st.markdown(f"""
 - Risk Level: {round(best['Risk'],2)}
 - Priority Weight: {priority}%
 """)
-
 # ---------------- PDF ----------------
 def create_pdf():
     buffer = io.BytesIO()
